@@ -30,7 +30,7 @@ def rgb_to_gray_torch(img):
     if img.max() > 1.5:
         img = img / 255.0
     r, g, b = img[0], img[1], img[2]
-    gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+    gray = 0.6 * r + 0.15 * g + 0.05 * b
     return gray
 
 
@@ -61,7 +61,7 @@ def otsu_threshold_torch(gray, num_bins=256):
     return thresh
 
 
-def calc_threshold_mask(img, kernel_size=7):
+def calc_threshold_mask(img, kernel_size=7, threshold_scale=0.95):
     """
     img: (3, H, W) RGB tensor or (H, W, 3) numpy
     returns: mask (H, W) boolean tensor
@@ -71,6 +71,7 @@ def calc_threshold_mask(img, kernel_size=7):
 
     # otsu threshold
     t = otsu_threshold_torch(gray)
+    t = t * threshold_scale
 
     # lesions are darker than surroundings
     rough_mask = gray < t
@@ -98,19 +99,5 @@ def calc_threshold_mask(img, kernel_size=7):
             q.append((y, 0))
         if mask[y, W - 1]:
             q.append((y, W - 1))
-
-    # 4-connected flood fill
-    while q:
-        y, x = q.popleft()
-        if visited[y, x]:
-            continue
-        if not mask[y, x]:
-            continue
-        visited[y, x] = True
-        # turn off any region connected to the border
-        mask[y, x] = False
-        for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
-            if 0 <= ny < H and 0 <= nx < W and not visited[ny, nx] and mask[ny, nx]:
-                q.append((ny, nx))
 
     return mask
