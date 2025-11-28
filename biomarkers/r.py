@@ -169,3 +169,4 @@ def compute_r1(
     slopes_t = torch.tensor(slopes, dtype=torch.float32)
     R1 = float(slopes_t.std(unbiased=False))  # population std
     return R1
+
