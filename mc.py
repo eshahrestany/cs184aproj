@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 import os
 import kagglehub
+from lesion_mask  import calc_threshold_mask as calc_lm
 
 # Download the dataset from Kaggle
 path = kagglehub.dataset_download("hasnainjaved/melanoma-skin-cancer-dataset-of-10000-images")
@@ -45,7 +46,7 @@ def compute_MC1(path_to_data):
         total_CL.append(CL)
     return total_CL
 
-def compute_MC2(path_to_data, lesion_mask):
+def compute_MC2(path_to_data):
     #uses masked data, may need to use actual mask
     total_MC2 = []
     for i in os.listdir(path_to_data):
@@ -53,12 +54,16 @@ def compute_MC2(path_to_data, lesion_mask):
         b, g, r = cv2.split(image)
 
         Lred   = (r > 150).astype(np.uint8)
-        Lgreen = (g > 150).astype(np.uint8)
         Lblue  = (b > 150).astype(np.uint8)
          # Restrict color masks to the lesion region
          #uses actual mask, not the combined image
-        A_red = np.sum(Lred * lesion_mask)
-        A_blue = np.sum(Lblue * lesion_mask)
+        mask = calc_lm(image)
+        mask_np = mask.cpu().numpy().astype(bool) if hasattr(mask, "cpu") else mask.astype(bool)
+        lesion_only = image.copy()
+        lesion_only[~mask_np] = 0  # zero out background
+
+        A_red = np.sum(Lred * mask_np)
+        A_blue = np.sum(Lblue * mask_np)
 
         # Avoid division by zero
         if (A_red + A_blue) == 0:
@@ -68,7 +73,7 @@ def compute_MC2(path_to_data, lesion_mask):
         total_MC2.append(float(MC2))
     return total_MC2
 
-def compute_MC4(path_to_data, lesion_mask):
+def compute_MC4(path_to_data):
     total_MC4 = []
     for i in os.listdir(path_to_data):
         image = cv2.imread(os.path.join(path_to_data,i))
@@ -87,22 +92,29 @@ def compute_MC4(path_to_data, lesion_mask):
         # Blue-gray: bright AND grayish OR strong blue
         Lbluegray = ((bright_pixels & gray_pixels) | (b > thr)).astype(np.uint8)
 
-        inside = Lbluegray & lesion_mask
+        mask = calc_lm(image)
+        mask_np = mask.cpu().numpy().astype(bool) if hasattr(mask, "cpu") else mask.astype(bool)
+        lesion_only = image.copy()
+        lesion_only[~mask_np] = 0  # zero out background
+        inside = Lbluegray & mask_np
 
         # If any pixel is present → MC4 = 1
         total_MC4.append(int(np.any(inside)))
     return total_MC4
 
-def convert_img_to_multi_color_IBC():
+def convert_img_to_multi_color_IBC(path_to_data):
     ''' 
-    Return: list of list of features, [MC1, MC2, MC3, MC4, ...]
+    Return: list of features, [MC1, MC2, MC3, MC4, ...]
     '''
-    ans= []
-    CL = compute_MC1()
+    CL = compute_MC1(path_to_data)
     temp = []
     for i in CL:
         temp.append(sum(i))
-    ans.append(temp)
+    return temp
     
-
- 
+if __name__ == "__main__":
+    train_features = []
+    train_features.append(convert_img_to_multi_color_IBC(train_benign))
+    train_features.append(compute_MC2(train_benign))
+    train_features.append(compute_MC4(train_benign))
+    print(train_features)
