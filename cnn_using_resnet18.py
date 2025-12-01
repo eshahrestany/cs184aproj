@@ -27,7 +27,7 @@ print("Train directory:", train_dir)
 print("Test directory:", test_dir)
 
 # 
-# 2. DATA TRANSFORMS
+# 2. TRANSFORMS
 # 
 
 IMG_SIZE = 224
@@ -70,9 +70,8 @@ print("Using device:", device)
 
 model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
 
-# Replace FC layer with binary classifier
 num_ftrs = model.fc.in_features
-model.fc = nn.Linear(num_ftrs, 1)   # single logit → sigmoid later
+model.fc = nn.Linear(num_ftrs, 1)
 
 model = model.to(device)
 

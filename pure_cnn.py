@@ -38,7 +38,7 @@ transform = transforms.Compose([
 ])
 
 #
-# 3. DATASETS + DATALOADERS
+# 3. LOAD DATA
 # 
 
 train_dataset = datasets.ImageFolder(train_dir, transform=transform)
@@ -51,7 +51,7 @@ num_classes = len(train_dataset.classes)
 print("Classes:", train_dataset.classes)
 
 #
-# 4. PURE CNN MODEL WITH ADAPTIVE POOLING
+# 4. PURE CNN MODEL WITH ADAPTIVE POOLING (trying to mimic resnet in case we need to change for some reason)
 #
 
 class PureCNN(nn.Module):
@@ -94,7 +94,7 @@ model = PureCNN(num_classes=num_classes).to(device)
 print(model)
 
 #
-# 5. LOSS + OPTIMIZER
+# 5. LOSS AND OPTIMIZER
 #
 
 criterion = nn.CrossEntropyLoss()
@@ -126,7 +126,7 @@ for epoch in range(EPOCHS):
     print(f"Epoch {epoch+1}/{EPOCHS}, Loss: {running_loss/len(train_loader):.4f}")
 
 #
-# 7. TEST LOOP
+# 7. EVALUATION
 #
 
 model.eval()
