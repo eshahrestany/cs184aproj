@@ -8,9 +8,9 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, classification_report
 from tqdm import tqdm
 
-# ---------------------------------------------------
+#
 # 1. DOWNLOAD DATASET USING KAGGLEHUB
-# ---------------------------------------------------
+# 
 
 print("Downloading dataset...")
 download_path = kagglehub.dataset_download(
@@ -26,9 +26,9 @@ print("Dataset downloaded to:", download_path)
 print("Train directory:", train_dir)
 print("Test directory:", test_dir)
 
-# ---------------------------------------------------
+# 
 # 2. DATA TRANSFORMS
-# ---------------------------------------------------
+# 
 
 IMG_SIZE = 224
 BATCH_SIZE = 32
@@ -49,9 +49,9 @@ test_transforms = transforms.Compose([
                          [0.229, 0.224, 0.225])
 ])
 
-# ---------------------------------------------------
+# 
 # 3. LOAD DATA USING IMAGEFOLDER
-# ---------------------------------------------------
+# 
 
 train_dataset = datasets.ImageFolder(train_dir, transform=train_transforms)
 test_dataset  = datasets.ImageFolder(test_dir, transform=test_transforms)
@@ -61,9 +61,9 @@ test_loader  = DataLoader(test_dataset,  batch_size=BATCH_SIZE, shuffle=False)
 
 print("Classes:", train_dataset.classes)
 
-# ---------------------------------------------------
+# 
 # 4. BUILD CNN MODEL (TRANSFER LEARNING: RESNET18)
-# ---------------------------------------------------
+# 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
@@ -76,16 +76,16 @@ model.fc = nn.Linear(num_ftrs, 1)   # single logit → sigmoid later
 
 model = model.to(device)
 
-# ---------------------------------------------------
+# 
 # 5. LOSS AND OPTIMIZER
-# ---------------------------------------------------
+# 
 
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-# ---------------------------------------------------
+# 
 # 6. TRAINING LOOP
-# ---------------------------------------------------
+# 
 
 EPOCHS = 5
 
@@ -112,9 +112,9 @@ def train():
 
     print("Training complete.\n")
 
-# ---------------------------------------------------
+# 
 # 7. EVALUATION
-# ---------------------------------------------------
+# 
 
 def evaluate():
     model.eval()
@@ -136,9 +136,9 @@ def evaluate():
     print("\nTest Accuracy:", acc)
     print("\nClassification Report:\n", classification_report(trues, preds, target_names=train_dataset.classes))
 
-# ---------------------------------------------------
+# 
 # 8. RUN TRAIN + TEST
-# ---------------------------------------------------
+# 
 
 train()
 evaluate()
