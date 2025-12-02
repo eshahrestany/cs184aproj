@@ -93,10 +93,7 @@ def convert_img_to_multi_color_IBC(image):
     Return: list of features, [MC1, MC2, MC3, MC4, ...]
     '''
     CL = compute_MC1(image)
-    temp = []
-    for i in CL:
-        temp.append(sum(i))
-    return temp
+    return sum(CL)
     
 if __name__ == "__main__":
     train_features = []

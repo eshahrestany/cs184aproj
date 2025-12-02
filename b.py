@@ -14,7 +14,7 @@ train_malignant = os.path.join(path, f"train/malignant")
 test_benign = os.path.join(path, f"test/benign")
 test_malignant = os.path.join(path, f"test/malignant")
 
-def compute_B1(image, mask_np, dtheta_deg=2):
+def compute_B1(image,mask_np, dtheta_deg=2):
     """
     Compute B1: average absolute angular derivative of radial mean brightness.
 
@@ -31,6 +31,7 @@ def compute_B1(image, mask_np, dtheta_deg=2):
     -------
     B1 : float
     """
+
 
     # Convert image to grayscale brightness
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
