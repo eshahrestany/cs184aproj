@@ -25,90 +25,74 @@ COLOR_RANGES = {
     "blue-gray/white": [(74, 103, 133), (255, 255, 255)]
 }
 
-def compute_MC1(path_to_data):
-    total_CL = []
-    for i in sorted(os.listdir(path_to_data)):
-        image = cv2.imread(os.path.join(path_to_data,i))
-        CL = []
-        detected_colors = []
+def compute_MC1(image):
+    CL = []
+    detected_colors = []
 
-        for color_name, (low, high) in COLOR_RANGES.items():
-            low = np.array(low, dtype=np.uint8)
-            high = np.array(high, dtype=np.uint8)
+    for color_name, (low, high) in COLOR_RANGES.items():
+        low = np.array(low, dtype=np.uint8)
+        high = np.array(high, dtype=np.uint8)
 
-            # Create mask for the color
-            mask = cv2.inRange(image, low, high)
+        # Create mask for the color
+        mask = cv2.inRange(image, low, high)
 
-            # If at least 1 pixel is detected → color present
-            present = mask.any()
+        # If at least 1 pixel is detected → color present
+        present = mask.any()
 
-            CL.append(1 if present else 0)
-            if present:
-                detected_colors.append(color_name)
-        total_CL.append(CL)
-    return total_CL
+        CL.append(1 if present else 0)
+        if present:
+            detected_colors.append(color_name)
+    return CL
 
-def compute_MC2(path_to_data):
-    #uses masked data, may need to use actual mask
-    total_MC2 = []
-    for i in sorted(os.listdir(path_to_data)):
-        image = cv2.imread(os.path.join(path_to_data,i))
-        b, g, r = cv2.split(image)
+def compute_MC2(image,mask_np):
+    b, g, r = cv2.split(image)
 
-        Lred   = (r > 150).astype(np.uint8)
-        Lblue  = (b > 150).astype(np.uint8)
-         # Restrict color masks to the lesion region
-         #uses actual mask, not the combined image
-        mask = calc_lm(image)
-        mask_np = mask.cpu().numpy().astype(bool) if hasattr(mask, "cpu") else mask.astype(bool)
-        lesion_only = image.copy()
-        lesion_only[~mask_np] = 0  # zero out background
+    Lred   = (r > 150).astype(np.uint8)
+    Lblue  = (b > 150).astype(np.uint8)
+        # Restrict color masks to the lesion region
+        #uses actual mask, not the combined image
 
-        A_red = np.sum(Lred * mask_np)
-        A_blue = np.sum(Lblue * mask_np)
+    A_red = np.sum(Lred * mask_np)
+    A_blue = np.sum(Lblue * mask_np)
 
-        # Avoid division by zero
-        if (A_red + A_blue) == 0:
-            total_MC2.append(0.0)
+    # Avoid division by zero
+    if (A_red + A_blue) == 0:
+        return 0.0
 
-        MC2 = (A_red - A_blue) / (A_red + A_blue)
-        total_MC2.append(float(MC2))
-    return total_MC2
+    MC2 = (A_red - A_blue) / (A_red + A_blue)
+    return float(MC2)
 
-def compute_MC4(path_to_data):
-    total_MC4 = []
-    for i in sorted(os.listdir(path_to_data)):
-        image = cv2.imread(os.path.join(path_to_data,i))
-        b, g, r = cv2.split(image)
-    
-        # Brightness threshold based on percentile
-        brightness = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        thr = np.percentile(brightness, 85)
-        bright_pixels = brightness >= thr
+def compute_MC4(image):
+    b, g, r = cv2.split(image)
 
-        # Grayish pixels: difference between channels is small
-        gray_pixels = (np.abs(r - g) <= 20) & \
-                    (np.abs(r - b) <= 20) & \
-                    (np.abs(g - b) <= 20)
+    # Brightness threshold based on percentile
+    brightness = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    thr = np.percentile(brightness, 85)
+    bright_pixels = brightness >= thr
 
-        # Blue-gray: bright AND grayish OR strong blue
-        Lbluegray = ((bright_pixels & gray_pixels) | (b > thr)).astype(np.uint8)
+    # Grayish pixels: difference between channels is small
+    gray_pixels = (np.abs(r - g) <= 20) & \
+                (np.abs(r - b) <= 20) & \
+                (np.abs(g - b) <= 20)
 
-        mask = calc_lm(image)
-        mask_np = mask.cpu().numpy().astype(bool) if hasattr(mask, "cpu") else mask.astype(bool)
-        lesion_only = image.copy()
-        lesion_only[~mask_np] = 0  # zero out background
-        inside = Lbluegray & mask_np
+    # Blue-gray: bright AND grayish OR strong blue
+    Lbluegray = ((bright_pixels & gray_pixels) | (b > thr)).astype(np.uint8)
 
-        # If any pixel is present → MC4 = 1
-        total_MC4.append(int(np.any(inside)))
-    return total_MC4
+    mask = calc_lm(image)
+    mask_np = mask.cpu().numpy().astype(bool) if hasattr(mask, "cpu") else mask.astype(bool)
+    lesion_only = image.copy()
+    lesion_only[~mask_np] = 0  # zero out background
+    inside = Lbluegray & mask_np
 
-def convert_img_to_multi_color_IBC(path_to_data):
+    # If any pixel is present → MC4 = 1
+    return int(np.any(inside)) 
+
+
+def convert_img_to_multi_color_IBC(image):
     ''' 
     Return: list of features, [MC1, MC2, MC3, MC4, ...]
     '''
-    CL = compute_MC1(path_to_data)
+    CL = compute_MC1(image)
     temp = []
     for i in CL:
         temp.append(sum(i))
