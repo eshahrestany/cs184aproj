@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 import os
 import kagglehub
+import saveFeatures
 from lesion_mask  import calc_threshold_mask as calc_lm
 
 # Download the dataset from Kaggle
@@ -15,17 +16,18 @@ train_benign = os.path.join(path, f"train/benign")
 train_malignant = os.path.join(path, f"train/malignant")
 test_benign = os.path.join(path, f"test/benign")
 test_malignant = os.path.join(path, f"test/malignant")
+#colors are wrong help
 COLOR_RANGES = {
-    "light brown": [(10, 20, 50), (22, 255, 255)],
-    "dark brown":  [(0, 20, 20), (20, 255, 150)],
-    "red":         [(0, 120, 70), (10, 255, 255)],
-    "black":       [(0, 0, 0), (180, 255, 40)],
-    "blue-gray/white": [(85, 10, 80), (110, 60, 255)]
+    "light brown": [(166, 143, 119), (171, 113, 53)],
+    "dark brown":  [(43, 34, 25), (143, 70, 0)],
+    "red":         [(92, 67, 67), (255, 0, 0)],
+    "black":       [(0, 0, 0), (67, 67, 67)],
+    "blue-gray/white": [(74, 103, 133), (255, 255, 255)]
 }
 
 def compute_MC1(path_to_data):
     total_CL = []
-    for i in os.listdir(path_to_data):
+    for i in sorted(os.listdir(path_to_data)):
         image = cv2.imread(os.path.join(path_to_data,i))
         CL = []
         detected_colors = []
@@ -49,7 +51,7 @@ def compute_MC1(path_to_data):
 def compute_MC2(path_to_data):
     #uses masked data, may need to use actual mask
     total_MC2 = []
-    for i in os.listdir(path_to_data):
+    for i in sorted(os.listdir(path_to_data)):
         image = cv2.imread(os.path.join(path_to_data,i))
         b, g, r = cv2.split(image)
 
@@ -75,7 +77,7 @@ def compute_MC2(path_to_data):
 
 def compute_MC4(path_to_data):
     total_MC4 = []
-    for i in os.listdir(path_to_data):
+    for i in sorted(os.listdir(path_to_data)):
         image = cv2.imread(os.path.join(path_to_data,i))
         b, g, r = cv2.split(image)
     
@@ -117,4 +119,4 @@ if __name__ == "__main__":
     train_features.append(convert_img_to_multi_color_IBC(train_benign))
     train_features.append(compute_MC2(train_benign))
     train_features.append(compute_MC4(train_benign))
-    print(train_features)
+    
