@@ -1,37 +1,7 @@
-# g.py
-
 import math
-import os
-import random
-from typing import Optional
-
-import kagglehub
-import torch
 import numpy as np
-from matplotlib import image as mpimg
+import torch
 
-from lesion_mask import calc_threshold_mask, as_tensor_3chw
-
-# -------------------------------------------------------------------------
-# Dataset paths (same as in r.py)
-# -------------------------------------------------------------------------
-
-path = kagglehub.dataset_download("hasnainjaved/melanoma-skin-cancer-dataset-of-10000-images")
-path = os.path.join(path, "melanoma_cancer_dataset")
-
-train_benign = os.path.join(path, "train/benign")
-train_malignant = os.path.join(path, "train/malignant")
-
-all_imgs = []
-for d in [train_benign, train_malignant]:
-    for fname in os.listdir(d):
-        if fname.lower().endswith((".jpg", ".jpeg", ".png")):
-            all_imgs.append(os.path.join(d, fname))
-
-
-# -------------------------------------------------------------------------
-# G1 computation
-# -------------------------------------------------------------------------
 
 def compute_G1(
     img: torch.Tensor,
@@ -126,23 +96,3 @@ def compute_G1(
 
     G1 = norm_perim - circle_norm
     return float(G1)
-
-
-
-if __name__ == "__main__":
-    sample_paths = random.sample(all_imgs, 10)
-
-    for lesion_path in sample_paths:
-        print(lesion_path)
-
-        # Load raw image as numpy (H, W, 3)
-        img_np = mpimg.imread(lesion_path)
-
-        # Convert to (3, H, W) tensor
-        lesion = as_tensor_3chw(img_np)
-
-        # IMPORTANT: pass the original numpy image to calc_threshold_mask
-        mask = calc_threshold_mask(img_np)
-
-        g1 = compute_G1(lesion, mask)
-        print("G1:", g1)

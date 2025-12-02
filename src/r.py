@@ -1,30 +1,7 @@
 import math
-import os
-import random
-from typing import Optional
-
-import kagglehub
-import numpy as np
 import torch
-from matplotlib import image as mpimg
-
-from lesion_mask import calc_threshold_mask, as_tensor_3chw
-
-# -------------------------------------------------------------------------
-# Dataset paths
-# -------------------------------------------------------------------------
-
-path = kagglehub.dataset_download("hasnainjaved/melanoma-skin-cancer-dataset-of-10000-images")
-path = os.path.join(path, "melanoma_cancer_dataset")
-
-train_benign = os.path.join(path, "train/benign")
-train_malignant = os.path.join(path, "train/malignant")
-
-all_imgs = []
-for d in [train_benign, train_malignant]:
-    for fname in os.listdir(d):
-        if fname.lower().endswith((".jpg", ".jpeg", ".png")):
-            all_imgs.append(os.path.join(d, fname))
+import numpy as np
+from typing import Optional
 
 
 def compute_R1(
@@ -1600,58 +1577,3 @@ def compute_R13(
 
     R13 = A_sym * abs(phi_sym - (math.pi / 2.0))
     return R13
-
-
-if __name__ == "__main__":
-    sample_paths = random.sample(all_imgs, 10)
-
-    for lesion_path in sample_paths:
-        print(lesion_path)
-
-        # Load raw image as numpy (H, W, 3)
-        img_np = mpimg.imread(lesion_path)
-
-        # Convert to (3, H, W) tensor
-        lesion = as_tensor_3chw(img_np)
-
-        # IMPORTANT: pass the original numpy image to calc_threshold_mask
-        mask = calc_threshold_mask(img_np)
-
-        r1 = compute_R1(lesion, mask)
-        print("R1:", r1)
-
-        r2 = compute_R2(lesion, mask)
-        print("R2:", r2)
-
-        r3 = compute_R3(lesion, mask)
-        print("R3:", r3)
-
-        r4 = compute_R4(lesion, mask)
-        print("R4:", r4)
-
-        r5 = compute_R5(lesion, mask)
-        print("R5:", r5)
-
-        r6 = compute_R6(lesion, mask)
-        print("R6:", r6)
-
-        r7 = compute_R7(lesion, mask)
-        print("R7:", r7)
-
-        r8 = compute_R8(lesion, mask)
-        print("R8:", r8)
-
-        r9 = compute_R9(lesion, mask)
-        print("R9:", r9)
-
-        r10 = compute_R10(lesion, mask)
-        print("R10:", r10)
-
-        r11 = compute_R11(lesion, mask)
-        print("R11:", r11)
-
-        r12 = compute_R12(lesion, mask)
-        print("R12:", r12)
-
-        r13 = compute_R13(lesion, mask)
-        print("R13:", r13)

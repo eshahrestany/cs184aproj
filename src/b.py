@@ -1,15 +1,6 @@
-import os
-import kagglehub
-import torch
 import numpy as np
+import torch
 
-path = kagglehub.dataset_download("hasnainjaved/melanoma-skin-cancer-dataset-of-10000-images")
-path = os.path.join(path, "melanoma_cancer_dataset")
-print(path)
-train_benign = os.path.join(path, f"train/benign")
-train_malignant = os.path.join(path, f"train/malignant")
-test_benign = os.path.join(path, f"test/benign")
-test_malignant = os.path.join(path, f"test/malignant")
 
 def _to_numpy_hwc(image) -> np.ndarray:
     """
@@ -384,9 +375,3 @@ def compute_B11(image, mask_np):
         return 0.0
     return B11
 
-
-if __name__ == "__main__":
-    B_features = [] 
-    B_features.append(compute_B10(train_benign))
-    B_features.append(compute_B11(train_benign))
-    print(B_features)
