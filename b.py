@@ -334,10 +334,10 @@ def compute_B11(path_to_data):
         if len(Rm_values) == 0 or np.mean(Rm_values) == 0:
             total_B11(0.0)
         R_range = np.max(Rm_values) - np.min(Rm_values)
-        total_B11( R_range / np.mean(Rm_values))
+        total_B11.append( R_range / np.mean(Rm_values))
     return total_B11
 if __name__ == "__main__":
     B_features = [] 
-    B_features.append(compute_B1(train_benign))
-    B_features.append(compute_B2(train_benign))
+    B_features.append(compute_B10(train_benign))
+    B_features.append(compute_B11(train_benign))
     print(B_features)
