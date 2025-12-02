@@ -32,9 +32,8 @@ def compute_B1(image,mask_np, dtheta_deg=2):
     B1 : float
     """
 
+    blue_channel = image[:, :, 0]
 
-    # Convert image to grayscale brightness
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Compute lesion center = centroid
     ys, xs = np.where(mask_np == 1)
@@ -78,7 +77,7 @@ def compute_B1(image,mask_np, dtheta_deg=2):
             continue
 
         # Brightness values along radial line
-        p_values = gray[ys_line, xs_line]
+        p_values = blue_channel[ys_line, xs_line]
 
         # Mean brightness along r1(θ)
         Rm = np.mean(p_values)
@@ -97,7 +96,7 @@ def compute_B1(image,mask_np, dtheta_deg=2):
 
 def compute_B2(image, mask_np):
     # Convert image to grayscale brightness
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blue_channel = image[:, :, 0]
 
     # Compute lesion center = centroid
     ys, xs = np.where(mask_np == 1)
@@ -142,7 +141,7 @@ def compute_B2(image, mask_np):
             continue
 
         # Brightness values along radial line
-        p_values = gray[ys_line, xs_line]
+        p_values = blue_channel[ys_line, xs_line]
         Rstd = np.std(p_values, ddof=1)  # unbiased estimator
         Rstd_values.append(Rstd)
     Rstd_values = np.array(Rstd_values)
@@ -167,8 +166,7 @@ def compute_B10(image, mask_np):
     B1 : float
     """
 
-    # Convert image to grayscale brightness
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blue_channel = image[:, :, 0]
 
     # Compute lesion center = centroid
     ys, xs = np.where(mask_np == 1)
@@ -212,7 +210,7 @@ def compute_B10(image, mask_np):
             continue
 
         # Brightness values along radial line
-        p_values = gray[ys_line, xs_line]
+        p_values = blue_channel[ys_line, xs_line]
 
         # Mean brightness along r1(θ)
         Rm = np.mean(p_values)
@@ -247,9 +245,7 @@ def compute_B11(image, mask_np):
     B1 : float
     """
 
-    # Convert image to grayscale brightness
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+    blue_channel = image[:, :, 0]
     # Compute lesion center = centroid
     ys, xs = np.where(mask_np == 1)
     cy = np.mean(ys)
@@ -292,7 +288,7 @@ def compute_B11(image, mask_np):
             continue
 
         # Brightness values along radial line
-        p_values = gray[ys_line, xs_line]
+        p_values = blue_channel[ys_line, xs_line]
 
         # Mean brightness along r1(θ)
         Rm = np.mean(p_values)
