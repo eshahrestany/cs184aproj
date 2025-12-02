@@ -33,7 +33,7 @@ for d in [train_benign, train_malignant]:
 # G1 computation
 # -------------------------------------------------------------------------
 
-def compute_g1(
+def compute_G1(
     img: torch.Tensor,
     lesion_mask,
 ) -> float:
@@ -144,5 +144,5 @@ if __name__ == "__main__":
         # IMPORTANT: pass the original numpy image to calc_threshold_mask
         mask = calc_threshold_mask(img_np)
 
-        g1 = compute_g1(lesion, mask)
+        g1 = compute_G1(lesion, mask)
         print("G1:", g1)

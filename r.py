@@ -29,7 +29,7 @@ for d in [train_benign, train_malignant]:
             all_imgs.append(os.path.join(d, fname))
 
 
-def compute_r1(
+def compute_R1(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -212,7 +212,7 @@ def compute_r1(
     return R1
 
 
-def compute_r2(
+def compute_R2(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -244,7 +244,7 @@ def compute_r2(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r2"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R2"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -270,7 +270,7 @@ def compute_r2(
 
     # ----------------------------------------------
     # Helper: find border radius along angle
-    # (copied from compute_r1 so behavior is identical)
+    # (copied from compute_R1 so behavior is identical)
     # ----------------------------------------------
     def border_radius(theta: float) -> Optional[float]:
         step = 0.5
@@ -319,7 +319,7 @@ def compute_r2(
     return float(R2)
 
 
-def compute_r3(
+def compute_R3(
     img: torch.Tensor,
     lesion_mask,
 ) -> float:
@@ -347,7 +347,7 @@ def compute_r3(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r3"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R3"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -380,7 +380,7 @@ def compute_r3(
     return float(R3)
 
 
-def compute_r4(
+def compute_R4(
     img: torch.Tensor,
     lesion_mask,
 ) -> float:
@@ -410,7 +410,7 @@ def compute_r4(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r4"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R4"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -452,7 +452,7 @@ def compute_r4(
     return float(R4)
 
 
-def compute_r5(
+def compute_R5(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -466,13 +466,13 @@ def compute_r5(
         Typical sharpness of the lesion border transitions in the red channel.
 
     Implementation:
-        Uses the same edge-slope procedure as compute_r1, but returns the
+        Uses the same edge-slope procedure as compute_R1, but returns the
         mean slope over all angles where a valid slope could be computed.
 
     Returns:
         R5 as Python float. Returns 0.0 if no valid slopes are found.
     """
-    # ---- 1. Normalize / convert inputs (same logic as compute_r1) ----
+    # ---- 1. Normalize / convert inputs (same logic as compute_R1) ----
     if not isinstance(img, torch.Tensor):
         raise TypeError("img must be a torch.Tensor")
 
@@ -529,7 +529,7 @@ def compute_r5(
     inner_margin = float(inner_margin_frac * D.item())
     outer_margin = float(outer_margin_frac * D.item())
 
-    # ---- 3. Helpers (same structure as in compute_r1) ----
+    # ---- 3. Helpers (same structure as in compute_R1) ----
     def border_radius_along_angle(theta: float) -> Optional[float]:
         """
         Walk from centroid along angle theta until we leave lesion.
@@ -621,7 +621,7 @@ def compute_r5(
     return R5
 
 
-def compute_r6(
+def compute_R6(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -652,7 +652,7 @@ def compute_r6(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r6"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R6"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -719,7 +719,7 @@ def compute_r6(
     return float(R6)
 
 
-def compute_r7(
+def compute_R7(
     img: torch.Tensor,
     lesion_mask,
     n_angle_bins: int = 36,
@@ -760,7 +760,7 @@ def compute_r7(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r7"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R7"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -803,7 +803,7 @@ def compute_r7(
         from skimage.morphology import skeletonize
     except ImportError:
         # If skimage is missing, degrade gracefully
-        # print("Warning: scikit-image not installed, compute_r7 returns 0.0")
+        # print("Warning: scikit-image not installed, compute_R7 returns 0.0")
         return 0.0
 
     network_np = network_mask.cpu().numpy().astype(bool)
@@ -851,7 +851,7 @@ def compute_r7(
     return R7
 
 
-def compute_r8(
+def compute_R8(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -893,7 +893,7 @@ def compute_r8(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r8"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R8"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -972,7 +972,7 @@ def compute_r8(
     return R8
 
 
-def compute_r9(
+def compute_R9(
     img: torch.Tensor,
     lesion_mask,
 ) -> float:
@@ -1008,7 +1008,7 @@ def compute_r9(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r9"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R9"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -1041,7 +1041,7 @@ def compute_r9(
     return float(R9)
 
 
-def compute_r10(
+def compute_R10(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -1087,7 +1087,7 @@ def compute_r10(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r10"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R10"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -1238,7 +1238,7 @@ def compute_r10(
     return float(mode_val)
 
 
-def compute_r11(
+def compute_R11(
     img: torch.Tensor,
     lesion_mask,
     n_axes: int = 18,
@@ -1274,7 +1274,7 @@ def compute_r11(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r11"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R11"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -1386,7 +1386,7 @@ def compute_r11(
     return R11
 
 
-def compute_r12(
+def compute_R12(
     img: torch.Tensor,
     lesion_mask,
     n_angles: int = 64,
@@ -1418,7 +1418,7 @@ def compute_r12(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r12"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R12"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -1483,7 +1483,7 @@ def compute_r12(
     return R12
 
 
-def compute_r13(
+def compute_R13(
     img: torch.Tensor,
     lesion_mask,
     n_axes: int = 18,
@@ -1518,7 +1518,7 @@ def compute_r13(
             lesion_mask = lesion_mask.any(dim=0)
         else:
             raise ValueError(
-                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_r13"
+                f"Unexpected mask shape {tuple(lesion_mask.shape)} for compute_R13"
             )
     elif lesion_mask.ndim != 2:
         raise ValueError("lesion_mask must be 2D")
@@ -1619,41 +1619,41 @@ if __name__ == "__main__":
         # IMPORTANT: pass the original numpy image to calc_threshold_mask
         mask = calc_threshold_mask(img_np)
 
-        r1 = compute_r1(lesion, mask)
+        r1 = compute_R1(lesion, mask)
         print("R1:", r1)
 
-        r2 = compute_r2(lesion, mask)
+        r2 = compute_R2(lesion, mask)
         print("R2:", r2)
 
-        r3 = compute_r3(lesion, mask)
+        r3 = compute_R3(lesion, mask)
         print("R3:", r3)
 
-        r4 = compute_r4(lesion, mask)
+        r4 = compute_R4(lesion, mask)
         print("R4:", r4)
 
-        r5 = compute_r5(lesion, mask)
+        r5 = compute_R5(lesion, mask)
         print("R5:", r5)
 
-        r6 = compute_r6(lesion, mask)
+        r6 = compute_R6(lesion, mask)
         print("R6:", r6)
 
-        r7 = compute_r7(lesion, mask)
+        r7 = compute_R7(lesion, mask)
         print("R7:", r7)
 
-        r8 = compute_r8(lesion, mask)
+        r8 = compute_R8(lesion, mask)
         print("R8:", r8)
 
-        r9 = compute_r9(lesion, mask)
+        r9 = compute_R9(lesion, mask)
         print("R9:", r9)
 
-        r10 = compute_r10(lesion, mask)
+        r10 = compute_R10(lesion, mask)
         print("R10:", r10)
 
-        r11 = compute_r11(lesion, mask)
+        r11 = compute_R11(lesion, mask)
         print("R11:", r11)
 
-        r12 = compute_r12(lesion, mask)
+        r12 = compute_R12(lesion, mask)
         print("R12:", r12)
 
-        r13 = compute_r13(lesion, mask)
+        r13 = compute_R13(lesion, mask)
         print("R13:", r13)
