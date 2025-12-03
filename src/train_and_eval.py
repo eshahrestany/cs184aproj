@@ -1,5 +1,3 @@
-# train_and_eval.py
-
 import csv
 import os
 import random
@@ -12,12 +10,12 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
-from src.biomarker_models import (
+from .biomarker_models import (
     create_biomarker_model,
     create_random_forest_model,
     create_svm_model,
 )
-from src.compute_biomarkers import FEATURE_NAMES, _compute_biomarkers_for_image
+from .compute_biomarkers import FEATURE_NAMES, _compute_biomarkers_for_image
 
 
 # ============================================================
