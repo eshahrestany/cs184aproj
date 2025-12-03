@@ -273,7 +273,7 @@ def main():
     opt = torch.optim.Adam(nn_model.parameters(), lr=lr, weight_decay=wd)
 
     best_tr_acc = 0.0
-    nn_ckpt_path = "models/bm_nn.pt"
+    nn_ckpt_path = "./models/bm_nn.pt"
 
     print("\n[NN] Starting training on FULL training set...")
     for ep in range(1, epochs + 1):
@@ -303,7 +303,7 @@ def main():
     rf_model = create_random_forest_model()
     rf_model.fit(X_train_norm, y_train_np)
 
-    rf_ckpt_path = "models/bm_rf.pkl"
+    rf_ckpt_path = "./models/bm_rf.pkl"
     with open(rf_ckpt_path, "wb") as f:
         pickle.dump(
             {
@@ -324,7 +324,7 @@ def main():
     svm_model = create_svm_model()
     svm_model.fit(X_train_norm, y_train_np)
 
-    svm_ckpt_path = "models/bm_svm.pkl"
+    svm_ckpt_path = "./models/bm_svm.pkl"
     with open(svm_ckpt_path, "wb") as f:
         pickle.dump(
             {
