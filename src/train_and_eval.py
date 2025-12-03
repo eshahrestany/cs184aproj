@@ -1,5 +1,3 @@
-# train_and_eval.py
-
 import csv
 import os
 import random
@@ -7,20 +5,21 @@ import pickle
 
 import kagglehub
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader, Subset
+from torch.utils.data import Dataset, DataLoader
 
-from biomarker_models import (
+from .biomarker_models import (
     create_biomarker_model,
     create_random_forest_model,
     create_svm_model,
 )
-from compute_biomarkers import FEATURE_NAMES
+from .compute_biomarkers import FEATURE_NAMES, _compute_biomarkers_for_image
 
 
 # ============================================================
-# Dataset backed by features.csv (all training data)
+# Dataset backed by features.csv (all TRAINING data)
 # ============================================================
 
 class BiomarkerDataset(Dataset):
@@ -30,7 +29,7 @@ class BiomarkerDataset(Dataset):
     Each row has:
         ID, label, FEATURE_NAMES...
 
-    We load all rows; train/val splitting is done in code.
+    We load all rows; ALL rows are used for training.
     """
 
     def __init__(self, csv_path: str):
@@ -123,18 +122,94 @@ def eval_epoch(model, loader, criterion, device, mean, std):
     return total_loss / total, total_correct / total
 
 
+def build_test_biomarker_set(csv_path: str = "test_features.csv"):
+    """
+    Build or load biomarker test set.
+
+    If test_features.csv exists:
+        → load from disk and return (X_test, y_test)
+
+    Otherwise:
+        → walk test/benign and test/malignant,
+          compute biomarkers with _compute_biomarkers_for_image(),
+          save CSV, and return arrays.
+    """
+
+    # --------------------------------------------------------
+    # Check for existing CSV
+    # --------------------------------------------------------
+    if os.path.exists(csv_path):
+        print(f"[TEST] Loading existing biomarker test set: {csv_path}")
+        df = pd.read_csv(csv_path)
+        X_test = df[FEATURE_NAMES].values.astype(np.float32)
+        y_test = df["label"].values.astype(int)
+        print(f"[TEST] Loaded {X_test.shape[0]} test samples.")
+        return X_test, y_test
+
+    # --------------------------------------------------------
+    # Otherwise create CSV from raw test images
+    # --------------------------------------------------------
+    print("\n[TEST] test_features.csv not found — building test biomarker set...")
+
+    dataset_root = kagglehub.dataset_download(
+        "hasnainjaved/melanoma-skin-cancer-dataset-of-10000-images"
+    )
+    data_root = os.path.join(dataset_root, "melanoma_cancer_dataset")
+    test_root = os.path.join(data_root, "test")
+
+    splits = [
+        ("benign", 0),
+        ("malignant", 1),
+    ]
+
+    rows = []
+
+    for subdir, label in splits:
+        dir_path = os.path.join(test_root, subdir)
+        if not os.path.isdir(dir_path):
+            raise RuntimeError(f"Test directory not found: {dir_path}")
+
+        files = sorted(
+            f for f in os.listdir(dir_path)
+            if f.lower().endswith((".jpg", ".jpeg", ".png"))
+        )
+
+        print(f"[TEST] {subdir}: {len(files)} images")
+
+        for fname in files:
+            img_path = os.path.join(dir_path, fname)
+
+            # Compute all biomarkers (returns dict with ID, label, and all features)
+            row = _compute_biomarkers_for_image(img_path, label)
+
+            # Order into a strict CSV row
+            ordered_row = {
+                "ID": row["ID"],
+                "label": row["label"],
+            }
+            for name in FEATURE_NAMES:
+                ordered_row[name] = float(row[name])
+
+            rows.append(ordered_row)
+
+    # Save CSV
+    df = pd.DataFrame(rows)
+    df.to_csv(csv_path, index=False)
+    print(f"[TEST] Saved biomarker test set to {csv_path}")
+
+    # Return arrays
+    X_test = df[FEATURE_NAMES].values.astype(np.float32)
+    y_test = df["label"].values.astype(int)
+    print(f"[TEST] Built {X_test.shape[0]} test samples.")
+
+    return X_test, y_test
+
+
 # ============================================================
 # Main
 # ============================================================
 
 def main():
-    # 1) Download dataset (for consistency / environment), though training uses CSV only
-    base = kagglehub.dataset_download(
-        "hasnainjaved/melanoma-skin-cancer-dataset-of-10000-images"
-    )
-    data_root = os.path.join(base, "melanoma_cancer_dataset", "train")
-    print(f"[INFO] Kaggle train data root (not directly used here): {data_root}")
-
     features_csv = "./features.csv"
 
     if not os.path.exists(features_csv):
@@ -147,7 +222,6 @@ def main():
     epochs = 20
     lr = 1e-3
     wd = 1e-4
-    val_split = 0.2
     seed = 42
 
     torch.manual_seed(seed)
@@ -157,21 +231,17 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[INFO] Using device: {device}")
 
-    # 2) Load full dataset from features.csv
+    # --------------------------------------------------------
+    # 1) Load FULL training dataset from features.csv
+    # --------------------------------------------------------
     full_ds = BiomarkerDataset(features_csv)
     N = len(full_ds)
 
-    # 3) Train/val split
-    indices = torch.randperm(N)
-    split = int(N * (1.0 - val_split))
-    train_idx = indices[:split]
-    val_idx = indices[split:]
+    # All rows are training data
+    train_loader = DataLoader(full_ds, batch_size=batch, shuffle=True)
 
-    train_subset = Subset(full_ds, train_idx.tolist())
-    val_subset = Subset(full_ds, val_idx.tolist())
-
-    # Compute normalization stats from train subset only (for NN + optional RF/SVM)
-    train_feats = full_ds.features[train_idx]
+    # Normalization stats from ALL training features
+    train_feats = full_ds.features
     mean = train_feats.mean(dim=0).to(device)
     std = train_feats.std(dim=0).to(device)
     std[std == 0] = 1.0
@@ -182,24 +252,17 @@ def main():
     def normalize_np(x_np: np.ndarray) -> np.ndarray:
         return (x_np - mean_np) / std_np
 
-    train_loader = DataLoader(train_subset, batch_size=batch, shuffle=True)
-    val_loader = DataLoader(val_subset, batch_size=batch, shuffle=False)
+    # Numpy features / labels for sklearn models
+    X_train_np = full_ds.features.numpy()
+    y_train_np = full_ds.labels.numpy().astype(int)
 
-    # Extract raw numpy features / labels for sklearn models
-    train_X_np = full_ds.features[train_idx].numpy()
-    val_X_np = full_ds.features[val_idx].numpy()
-    train_y_np = full_ds.labels[train_idx].numpy().astype(int)
-    val_y_np = full_ds.labels[val_idx].numpy().astype(int)
-
-    # Optionally normalize for RF/SVM as well (can help a bit, especially for SVM)
-    train_X_norm = normalize_np(train_X_np)
-    val_X_norm = normalize_np(val_X_np)
+    X_train_norm = normalize_np(X_train_np)
 
     # ============================================================
-    # 4) Neural Net model
+    # 2) Neural Net model (train on ALL training data)
     # ============================================================
 
-    input_dim = len(FEATURE_NAMES)  # 21 with current setup
+    input_dim = len(FEATURE_NAMES)
     nn_model = create_biomarker_model(
         input_dim=input_dim,
         hidden_dims=(64, 32),
@@ -209,22 +272,16 @@ def main():
     criterion = nn.BCEWithLogitsLoss()
     opt = torch.optim.Adam(nn_model.parameters(), lr=lr, weight_decay=wd)
 
-    best_nn_acc = 0.0
-    nn_ckpt_path = "models/bm_nn.pt"
+    best_tr_acc = 0.0
+    nn_ckpt_path = "./models/bm_nn.pt"
 
-    print("\n[NN] Starting training...")
+    print("\n[NN] Starting training on FULL training set...")
     for ep in range(1, epochs + 1):
         tr_loss, tr_acc = train_epoch(nn_model, train_loader, opt, criterion, device, mean, std)
-        va_loss, va_acc = eval_epoch(nn_model, val_loader, criterion, device, mean, std)
+        print(f"[NN] Epoch {ep:03d} | train loss {tr_loss:.4f}, acc {tr_acc:.4f}")
 
-        print(
-            f"[NN] Epoch {ep:03d} | "
-            f"train loss {tr_loss:.4f}, acc {tr_acc:.4f} | "
-            f"val loss {va_loss:.4f}, acc {va_acc:.4f}"
-        )
-
-        if va_acc > best_nn_acc:
-            best_nn_acc = va_acc
+        if tr_acc > best_tr_acc:
+            best_tr_acc = tr_acc
             torch.save(
                 {
                     "model": nn_model.state_dict(),
@@ -234,22 +291,19 @@ def main():
                 },
                 nn_ckpt_path,
             )
-            print(f"[NN] Saved new best model to {nn_ckpt_path} (val acc={va_acc:.4f})")
+            print(f"[NN] Saved new best model to {nn_ckpt_path} (train acc={tr_acc:.4f})")
 
-    print(f"[NN] Done. Best val acc = {best_nn_acc:.4f}")
+    print(f"[NN] Done. Best train acc = {best_tr_acc:.4f}")
 
     # ============================================================
-    # 5) Random Forest
+    # 3) Random Forest (train on ALL training data)
     # ============================================================
 
-    print("\n[RF] Training Random Forest...")
+    print("\n[RF] Training Random Forest on FULL training set...")
     rf_model = create_random_forest_model()
-    rf_model.fit(train_X_norm, train_y_np)
-    rf_val_pred = rf_model.predict(val_X_norm)
-    rf_val_acc = (rf_val_pred == val_y_np).mean()
-    print(f"[RF] Val acc = {rf_val_acc:.4f}")
+    rf_model.fit(X_train_norm, y_train_np)
 
-    rf_ckpt_path = "models/bm_rf.pkl"
+    rf_ckpt_path = "./models/bm_rf.pkl"
     with open(rf_ckpt_path, "wb") as f:
         pickle.dump(
             {
@@ -263,17 +317,14 @@ def main():
     print(f"[RF] Saved Random Forest checkpoint to {rf_ckpt_path}")
 
     # ============================================================
-    # 6) SVM
+    # 4) SVM (train on ALL training data)
     # ============================================================
 
-    print("\n[SVM] Training SVM...")
+    print("\n[SVM] Training SVM on FULL training set...")
     svm_model = create_svm_model()
-    svm_model.fit(train_X_norm, train_y_np)
-    svm_val_pred = svm_model.predict(val_X_norm)
-    svm_val_acc = (svm_val_pred == val_y_np).mean()
-    print(f"[SVM] Val acc = {svm_val_acc:.4f}")
+    svm_model.fit(X_train_norm, y_train_np)
 
-    svm_ckpt_path = "models/bm_svm.pkl"
+    svm_ckpt_path = "./models/bm_svm.pkl"
     with open(svm_ckpt_path, "wb") as f:
         pickle.dump(
             {
@@ -287,40 +338,43 @@ def main():
     print(f"[SVM] Saved SVM checkpoint to {svm_ckpt_path}")
 
     # ============================================================
-    # 7) E-class ensemble: majority vote over NN, RF, SVM
+    # 5) Build TEST set biomarkers from raw images and evaluate
     # ============================================================
 
-    print("\n[E] Evaluating E-class ensemble (majority vote)...")
+    X_test, y_test = build_test_biomarker_set()
+    X_test_norm = normalize_np(X_test)
 
-    # NN predictions on val set
+    # --- NN test ---
     nn_model.eval()
-    val_logits_all = []
     with torch.no_grad():
-        for x, _ in val_loader:
-            x = x.to(device)
-            x_norm = (x - mean) / std
-            logits = nn_model(x_norm)
-            val_logits_all.append(logits.cpu())
-    val_logits_all = torch.cat(val_logits_all, dim=0)
-    nn_val_pred = (torch.sigmoid(val_logits_all) >= 0.5).long().numpy()
+        X_test_t = torch.from_numpy(X_test).to(device)
+        X_test_t = (X_test_t - mean) / std
+        logits_test = nn_model(X_test_t)
+        nn_pred = (torch.sigmoid(logits_test) >= 0.5).long().cpu().numpy().reshape(-1)
+    nn_acc = (nn_pred == y_test).mean()
+    print(f"\n[TEST] Biomarker NN test acc = {nn_acc:.4f}")
 
-    # RF / SVM predictions already computed
-    rf_val_pred = rf_val_pred.astype(int)
-    svm_val_pred = svm_val_pred.astype(int)
+    # --- RF test ---
+    rf_pred = rf_model.predict(X_test_norm).astype(int)
+    rf_acc = (rf_pred == y_test).mean()
+    print(f"[TEST] Random Forest test acc = {rf_acc:.4f}")
 
-    # sanity: make sure lengths line up with val_y_np
-    assert nn_val_pred.shape[0] == val_y_np.shape[0], "NN val size mismatch"
-    assert rf_val_pred.shape[0] == val_y_np.shape[0], "RF val size mismatch"
-    assert svm_val_pred.shape[0] == val_y_np.shape[0], "SVM val size mismatch"
+    # --- SVM test ---
+    svm_pred = svm_model.predict(X_test_norm).astype(int)
+    svm_acc = (svm_pred == y_test).mean()
+    print(f"[TEST] SVM test acc          = {svm_acc:.4f}")
 
-    votes = np.stack([nn_val_pred, rf_val_pred, svm_val_pred], axis=1)  # (N_val, 3)
+    # ============================================================
+    # 6) E-class ensemble (majority vote over NN, RF, SVM)
+    # ============================================================
+
+    votes = np.stack([nn_pred, rf_pred, svm_pred], axis=1)  # (N_test, 3)
     vote_sum = votes.sum(axis=1)  # 0..3
-    e_val_pred = (vote_sum >= 2).astype(int)
+    e_pred = (vote_sum >= 2).astype(int)
+    e_acc = (e_pred == y_test).mean()
 
-    e_val_acc = (e_val_pred == val_y_np).mean()
-    print(f"[E] Ensemble (NN + RF + SVM) val acc = {e_val_acc:.4f}")
-
-    print("\n[INFO] Finished training/evaluation for NN, RF, SVM, and E-class ensemble.")
+    print(f"[TEST] Ensemble (NN + RF + SVM) test acc = {e_acc:.4f}")
+    print("\n[INFO] Finished training on features.csv and evaluating on image test set.")
 
 
 if __name__ == "__main__":

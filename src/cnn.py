@@ -249,7 +249,7 @@ def main():
     num_epochs = 10
     train(model, train_loader, device, num_epochs=num_epochs, lr=1e-4)
 
-    weights_path = "models/cnn_melanoma.pt"
+    weights_path = "./models/cnn_melanoma.pt"
     torch.save(model.state_dict(), weights_path)
     print(f"Saved model weights to: {weights_path}")
 
