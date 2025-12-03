@@ -8,11 +8,11 @@ import matplotlib.image as mpimg
 import numpy as np
 import multiprocessing as mp
 
-from b import compute_B1, compute_B2, compute_B10, compute_B11
-from g import compute_G1
-from lesion_mask import as_tensor_3chw, calc_threshold_mask
-from mc import compute_MC1, compute_MC2, compute_MC4
-from r import (
+from src.b import compute_B1, compute_B2, compute_B10, compute_B11
+from src.g import compute_G1
+from src.lesion_mask import as_tensor_3chw, calc_threshold_mask
+from src.mc import compute_MC1, compute_MC2, compute_MC4
+from src.r import (
     compute_R1, compute_R2, compute_R3, compute_R4, compute_R5, compute_R6,
     compute_R7, compute_R8, compute_R9, compute_R10, compute_R11, compute_R12, compute_R13
 )
