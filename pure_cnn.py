@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
 #
 # 1. DOWNLOAD DATASET FROM KAGGLE
@@ -106,9 +107,16 @@ optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 EPOCHS = 10
 
+train_losses = []
+val_losses = []
+train_accs = []
+val_accs = []
+
 for epoch in range(EPOCHS):
     model.train()
     running_loss = 0.0
+    correct_train = 0
+    total_train = 0
 
     for images, labels in train_loader:
         images = images.to(device)
@@ -116,33 +124,78 @@ for epoch in range(EPOCHS):
 
         optimizer.zero_grad()
         outputs = model(images)
-
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
 
-    print(f"Epoch {epoch+1}/{EPOCHS}, Loss: {running_loss/len(train_loader):.4f}")
-
-#
-# 7. EVALUATION
-#
-
-model.eval()
-correct = 0
-total = 0
-
-with torch.no_grad():
-    for images, labels in test_loader:
-        images = images.to(device)
-        labels = labels.to(device)
-
-        outputs = model(images)
+        # TRAIN ACCURACY
         _, predicted = torch.max(outputs, 1)
+        total_train += labels.size(0)
+        correct_train += (predicted == labels).sum().item()
 
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+    avg_train_loss = running_loss / len(train_loader)
+    avg_train_acc = correct_train / total_train * 100
 
-accuracy = correct / total * 100
-print(f"Test Accuracy: {accuracy:.2f}%")
+    train_losses.append(avg_train_loss)
+    train_accs.append(avg_train_acc)
+
+    # VALIDATION
+    model.eval()
+    val_running_loss = 0.0
+    correct_val = 0
+    total_val = 0
+
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+
+            loss = criterion(outputs, labels)
+            val_running_loss += loss.item()
+
+            _, predicted = torch.max(outputs, 1)
+            total_val += labels.size(0)
+            correct_val += (predicted == labels).sum().item()
+
+    avg_val_loss = val_running_loss / len(test_loader)
+    avg_val_acc = correct_val / total_val * 100
+
+    val_losses.append(avg_val_loss)
+    val_accs.append(avg_val_acc)
+
+    print(
+        f"Epoch {epoch+1}/{EPOCHS} | "
+        f"Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f} | "
+        f"Train Acc: {avg_train_acc:.2f}%, Val Acc: {avg_val_acc:.2f}%"
+    )
+
+
+#
+# 7. PLOTS
+#
+
+# LOSS PLOT
+plt.figure(figsize=(8, 5))
+plt.plot(train_losses, label="Training Loss")
+plt.plot(val_losses, label="Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training vs Validation Loss")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# ACCURACY PLOT
+plt.figure(figsize=(8, 5))
+plt.plot(train_accs, label="Training Accuracy")
+plt.plot(val_accs, label="Validation Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy (%)")
+plt.title("Training vs Validation Accuracy")
+plt.legend()
+plt.grid(True)
+plt.show()
