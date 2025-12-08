@@ -122,6 +122,18 @@ def eval_epoch(model, loader, criterion, device, mean, std):
     return total_loss / total, total_correct / total
 
 
+def binary_cross_entropy_np(y_true, y_prob, eps: float = 1e-7) -> float:
+    """
+    Compute mean binary cross-entropy loss in numpy given:
+      y_true: (N,) in {0,1}
+      y_prob: (N,) in [0,1]
+    """
+    y_true = np.asarray(y_true, dtype=np.float64)
+    y_prob = np.clip(np.asarray(y_prob, dtype=np.float64), eps, 1.0 - eps)
+    loss = -(y_true * np.log(y_prob) + (1.0 - y_true) * np.log(1.0 - y_prob))
+    return float(loss.mean())
+
+
 def build_test_biomarker_set(csv_path: str = "test_features.csv"):
     """
     Build or load biomarker test set.
@@ -344,28 +356,43 @@ def main():
     X_test, y_test = build_test_biomarker_set()
     X_test_norm = normalize_np(X_test)
 
-    # --- NN test ---
+    # --- NN test (acc + loss) ---
     nn_model.eval()
     with torch.no_grad():
         X_test_t = torch.from_numpy(X_test).to(device)
         X_test_t = (X_test_t - mean) / std
-        logits_test = nn_model(X_test_t)
-        nn_pred = (torch.sigmoid(logits_test) >= 0.5).long().cpu().numpy().reshape(-1)
+        logits_test = nn_model(X_test_t).squeeze()
+        nn_prob = torch.sigmoid(logits_test).cpu().numpy().reshape(-1)
+        nn_pred = (nn_prob >= 0.5).astype(int)
+
     nn_acc = (nn_pred == y_test).mean()
-    print(f"\n[TEST] Biomarker NN test acc = {nn_acc:.4f}")
+    nn_val_loss = binary_cross_entropy_np(y_test, nn_prob)
 
-    # --- RF test ---
+    # --- RF test (acc + loss) ---
     rf_pred = rf_model.predict(X_test_norm).astype(int)
+    # probabilities for loss
+    rf_prob = rf_model.predict_proba(X_test_norm)[:, 1]
     rf_acc = (rf_pred == y_test).mean()
-    print(f"[TEST] Random Forest test acc = {rf_acc:.4f}")
+    rf_val_loss = binary_cross_entropy_np(y_test, rf_prob)
 
-    # --- SVM test ---
+    # --- SVM test (acc + loss) ---
     svm_pred = svm_model.predict(X_test_norm).astype(int)
+    # Try to get probabilities; fall back to squashed decision_function; then to hard labels.
+    if hasattr(svm_model, "predict_proba"):
+        svm_prob = svm_model.predict_proba(X_test_norm)[:, 1]
+    elif hasattr(svm_model, "decision_function"):
+        scores = svm_model.decision_function(X_test_norm)
+        # map scores to [0,1] with logistic
+        svm_prob = 1.0 / (1.0 + np.exp(-scores))
+    else:
+        svm_prob = svm_pred.astype(float)
+
     svm_acc = (svm_pred == y_test).mean()
-    print(f"[TEST] SVM test acc          = {svm_acc:.4f}")
+    svm_val_loss = binary_cross_entropy_np(y_test, svm_prob)
 
     # ============================================================
     # 6) E-class ensemble (majority vote over NN, RF, SVM)
+    #    + ensemble loss from averaged probabilities
     # ============================================================
 
     votes = np.stack([nn_pred, rf_pred, svm_pred], axis=1)  # (N_test, 3)
@@ -373,7 +400,16 @@ def main():
     e_pred = (vote_sum >= 2).astype(int)
     e_acc = (e_pred == y_test).mean()
 
-    print(f"[TEST] Ensemble (NN + RF + SVM) test acc = {e_acc:.4f}")
+    # ensemble probability: average of model probabilities
+    e_prob = (nn_prob + rf_prob + svm_prob) / 3.0
+    e_val_loss = binary_cross_entropy_np(y_test, e_prob)
+
+    # Print all validation metrics
+    print(f"\n[TEST] Biomarker NN   test acc = {nn_acc:.4f}, loss = {nn_val_loss:.4f}")
+    print(f"[TEST] Random Forest  test acc = {rf_acc:.4f}, loss = {rf_val_loss:.4f}")
+    print(f"[TEST] SVM            test acc = {svm_acc:.4f}, loss = {svm_val_loss:.4f}")
+    print(f"[TEST] Ensemble (NN + RF + SVM) test acc = {e_acc:.4f}, loss = {e_val_loss:.4f}")
+
     print("\n[INFO] Finished training on features.csv and evaluating on image test set.")
 
 
