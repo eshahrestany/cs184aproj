@@ -6,6 +6,8 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report
+
 
 #
 # 1. DOWNLOAD DATASET FROM KAGGLE
@@ -147,17 +149,23 @@ for epoch in range(EPOCHS):
     correct_val = 0
     total_val = 0
 
+    all_preds = []
+    all_labels = []
+
     with torch.no_grad():
         for images, labels in test_loader:
             images = images.to(device)
             labels = labels.to(device)
 
             outputs = model(images)
-
             loss = criterion(outputs, labels)
             val_running_loss += loss.item()
 
             _, predicted = torch.max(outputs, 1)
+
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
             total_val += labels.size(0)
             correct_val += (predicted == labels).sum().item()
 
@@ -172,6 +180,10 @@ for epoch in range(EPOCHS):
         f"Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f} | "
         f"Train Acc: {avg_train_acc:.2f}%, Val Acc: {avg_val_acc:.2f}%"
     )
+
+    print("\nClassification Report:")
+    print(classification_report(all_labels, all_preds, target_names=train_dataset.classes))
+
 
 
 #

@@ -7,6 +7,8 @@ from torchvision import datasets, transforms, models
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, classification_report
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+
 
 #
 # 1. DOWNLOAD DATASET USING KAGGLEHUB
@@ -87,11 +89,20 @@ optimizer = optim.Adam(model.parameters(), lr=1e-4)
 # 
 
 EPOCHS = 5
+train_losses = []
+val_losses = []
+train_accs = []
+val_accs = []
 
 def train():
-    model.train()
     for epoch in range(EPOCHS):
+
+        # ---- TRAIN ----
+        model.train()
         running_loss = 0.0
+        correct = 0
+        total = 0
+
         loop = tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS}")
 
         for images, labels in loop:
@@ -99,7 +110,6 @@ def train():
             labels = labels.float().to(device)
 
             optimizer.zero_grad()
-
             outputs = model(images).view(-1)
             loss = criterion(outputs, labels)
 
@@ -107,13 +117,59 @@ def train():
             optimizer.step()
 
             running_loss += loss.item()
+
+            # TRAIN ACCURACY
+            preds = (torch.sigmoid(outputs) >= 0.5).long()
+            correct += (preds.cpu() == labels.cpu().long()).sum().item()
+            total += labels.size(0)
+
             loop.set_postfix(loss=running_loss / (len(loop)))
 
-    print("Training complete.\n")
+        avg_train_loss = running_loss / len(train_loader)
+        avg_train_acc = correct / total
+
+        train_losses.append(avg_train_loss)
+        train_accs.append(avg_train_acc)
+
+        # ---- VALIDATION METRICS ----
+        val_loss, val_acc = validate_epoch()
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
+
+        print(
+            f"Epoch {epoch+1}/{EPOCHS} | "
+            f"Train Loss: {avg_train_loss:.4f}, Val Loss: {val_loss:.4f} | "
+            f"Train Acc: {avg_train_acc*100:.2f}%, Val Acc: {val_acc*100:.2f}%\n"
+        )
+
 
 # 
 # 7. EVALUATION
 # 
+
+def validate_epoch():
+    model.eval()
+    running_loss = 0.0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.float().to(device)
+
+            outputs = model(images).view(-1)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
+
+            preds = (torch.sigmoid(outputs) >= 0.5).long()
+            correct += (preds.cpu() == labels.cpu().long()).sum().item()
+            total += labels.size(0)
+
+    avg_loss = running_loss / len(test_loader)
+    avg_acc = correct / total
+    return avg_loss, avg_acc
+
 
 def evaluate():
     model.eval()
@@ -141,3 +197,25 @@ def evaluate():
 
 train()
 evaluate()
+
+# LOSS PLOT
+plt.figure(figsize=(8, 5))
+plt.plot(train_losses, label="Training Loss")
+plt.plot(val_losses, label="Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training vs Validation Loss")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# ACCURACY PLOT
+plt.figure(figsize=(8, 5))
+plt.plot(train_accs, label="Training Accuracy")
+plt.plot(val_accs, label="Validation Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Training vs Validation Accuracy")
+plt.legend()
+plt.grid(True)
+plt.show()
