@@ -1,5 +1,3 @@
-# compute_biomarkers.py
-
 import csv
 import os
 from typing import Dict, List, Tuple
@@ -17,9 +15,7 @@ from .r import (
     compute_R7, compute_R8, compute_R9, compute_R10, compute_R11, compute_R12, compute_R13
 )
 
-# ---------------------------------------------------------------------
 # Feature ordering (must match the model input ordering)
-# ---------------------------------------------------------------------
 
 FEATURE_NAMES: List[str] = [
     "B1", "B2", "B10", "B11",
