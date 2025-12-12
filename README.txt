@@ -5,7 +5,8 @@ download the data to your computer and put it in your PC's cache folder.
 HOW TO RUN:
 Run project.ipynb for a walkthrough demonstration of different areas of our code.
 To run the Eclass model on the biomarkers, from the project root run `python -m src.train_and_eval`
-Similarly, to run the CNN on the images for a baseline (does not use biomarkers) run `python -m src.cnn`
+To run the CNNs on the images for a baseline (does not use biomarkers) run pure_cnn.py for the custom version 
+and cnn_using_resnet18.py for the ResNet18 version.
 Note that we precomputed the biomarker results on all images as doing so takes a long time, the results are in
 features.csv and test_features.csv. Deleting these files and running train_and_eval will recompute them and generate
 new csv files.
@@ -13,6 +14,8 @@ new csv files.
 project.ipynb              - Notebook comparing CNN vs biomarker models.
 features.csv               - Biomarker dataset computed from training images.
 test_features.csv          - Biomarker dataset computed from validation images.
+cnn_using_resnet18.py      - CNN architecture, training, and evaluation on images using pretrained model.
+pure_cnn.py                - CNN architecture, training, and evaluation on images.
 
 models/bm_nn.pt            - Trained biomarker neural network weights.
 models/bm_rf.pkl           - Trained Random Forest biomarker model.
